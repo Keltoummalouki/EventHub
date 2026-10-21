@@ -1,161 +1,186 @@
-# Morocco360
+# EventHub
 
-**Plateforme centralisee pour tous les evenements au Maroc**
+**La plateforme centralisée pour découvrir et réserver des événements au Maroc.**
 
----
+EventHub est une plateforme web destinée aux résidents et aux touristes qui souhaitent **découvrir, réserver et gérer leurs événements au Maroc** : concerts, festivals, événements sportifs, conférences, expositions et bien plus encore.
 
-## Vue d'ensemble
+Le projet repose sur une architecture **full-stack TypeScript** avec **Next.js**, **NestJS** et **PostgreSQL**. Il comprend un système d'authentification sécurisé, une gestion des billets, une validation des entrées par QR code ainsi que des outils dédiés aux organisateurs et à leur personnel.
 
-Morocco360 est une plateforme web permettant aux utilisateurs (locaux et touristes) de decouvrir, reserver et gerer des evenements au Maroc.
+> **Statut :** en développement actif — dernière version documentée : `v0.3.0` (mars 2026).
 
-**Objectif principal** : Simplifier l'acces aux evenements au Maroc tout en offrant une experience utilisateur fluide et securisee.
+## Sommaire
 
----
+- [Présentation](#présentation)
+- [Fonctionnalités](#fonctionnalités)
+- [Stack technique](#stack-technique)
+- [Architecture du projet](#architecture-du-projet)
+- [Modèle de données](#modèle-de-données)
+- [Installation locale](#installation-locale)
+- [API REST — authentification](#api-rest--authentification)
+- [Sécurité](#sécurité)
+- [Tests](#tests)
+- [CI/CD](#cicd)
+- [Déploiement](#déploiement)
+- [Historique des versions](#historique-des-versions)
+- [Contribution](#contribution)
+- [Notes sur le changement de nom](#notes-sur-le-changement-de-nom)
 
-## Public cible
+## Présentation
 
-- **Locaux** : Cherchant des evenements pres de chez eux
-- **Touristes internationaux** : Explorant la culture, musique, sports au Maroc
-- **Fans d'evenements** : Musique, sports, festivals, conferences, expositions
+### Objectif
 
----
+Simplifier l'accès aux événements au Maroc et proposer une expérience fluide et sécurisée, de la découverte d'un événement jusqu'au contrôle des billets à l'entrée.
 
-## Fonctionnalites principales
+### Public cible
 
-### 1. Authentification et Comptes
-- Inscription et connexion par email/password
-- JWT access token (15 min) + refresh token (7 jours) avec rotation
-- Hachage bcrypt (cost factor 12) pour les mots de passe et les refresh tokens
-- Rate limiting sur les routes sensibles
+- **Résidents :** trouver des événements près de chez eux.
+- **Touristes internationaux :** découvrir les activités culturelles, musicales et sportives du Maroc.
+- **Passionnés d'événements :** suivre concerts, festivals, conférences, salons, expositions et compétitions sportives.
+- **Organisateurs et personnel :** gérer les événements, les participants et les contrôles d'accès.
 
-### 2. Systeme de tickets et evenements
-- Consultation d'evenements filtres par type, date, ville, prix
-- Reservation multi-tickets
-- Gestion des billets avec QR code scannable
-- Historique des reservations
+## Fonctionnalités
 
-### 3. Paiement securise
-- Integration Stripe, PayPal, cartes bancaires locales
-- Recus emailes et telechargeables
-- Gestion des remboursements
+### 1. Authentification et comptes
 
-### 4. Profil utilisateur
-- Gestion des preferences
-- Historique complet des reservations
-- Parametres de securite
+- Inscription et connexion par adresse e-mail et mot de passe.
+- Authentification par **JWT** avec access token (15 minutes) et refresh token (7 jours).
+- Rotation des refresh tokens pour invalider les anciens tokens après renouvellement.
+- Hachage des mots de passe et des refresh tokens avec **bcrypt** (cost factor 12).
+- Limitation du nombre de requêtes sur les routes sensibles.
+- Gestion des rôles : `ADMIN`, `ORGANIZER`, `STAFF` et `USER`.
 
-### 5. Systeme de scanning QR
-- Scanning securise avec HMAC-SHA256
-- Gestion des roles (ORGANIZER, STAFF)
-- Audit trail complet de tous les scans
-- Interface mobile optimisee pour le scanning
-- **[Documentation complete du systeme QR →](docs/QR_SCANNING_SYSTEM.md)**
+### 2. Découverte d'événements et billetterie
 
----
+- Consultation des événements avec filtres par type, date, ville et prix.
+- Réservation de plusieurs billets.
+- Billets individuels associés à un QR code.
+- Consultation de l'historique des réservations.
+- Catégories de billets par événement, comme Standard et VIP.
 
-## Stack technologique
+### 3. Paiements et remboursements
 
-| Couche        | Technologies                          |
-|---------------|---------------------------------------|
-| **Frontend**  | Next.js 14+ (React, TypeScript)       |
-| **Backend**   | Node.js + NestJS 11 (TypeScript)      |
-| **Database**  | Supabase PostgreSQL 17 / Docker local |
-| **ORM**       | TypeORM 0.3                           |
-| **Auth**      | JWT (access + refresh) + Passport.js  |
-| **CI/CD**     | GitHub Actions                        |
-| **Container** | Docker + Docker Compose               |
+Périmètre prévu pour la billetterie :
 
-Deploiement gratuit recommande : **Supabase + Render + Vercel**. Voir le guide
-pas a pas : **[docs/SUPABASE_DEPLOYMENT.md](docs/SUPABASE_DEPLOYMENT.md)**.
+- Intégration de moyens de paiement, notamment **Stripe**, **PayPal** et cartes bancaires locales.
+- Reçus envoyés par e-mail et disponibles au téléchargement.
+- Gestion des remboursements.
 
----
+> La présence de ces fonctionnalités dans le périmètre du projet ne signifie pas que tous les prestataires de paiement sont déjà intégrés.
 
-## Structure du projet
+### 4. Espace utilisateur
 
-```
-morocco360/
-├── api/                        # Backend NestJS
+- Gestion des informations du profil et des préférences.
+- Historique des réservations et des billets.
+- Paramètres de sécurité du compte.
+
+### 5. Scan et validation des QR codes
+
+- QR codes signés avec **HMAC-SHA256** pour limiter la contrefaçon.
+- Validation des billets par le personnel autorisé (`STAFF`, `ORGANIZER`).
+- Verrouillage pessimiste en base de données pour éviter les doubles scans concurrents.
+- Historique d'audit des scans (`QRScanLog`).
+- Interface de scan adaptée au mobile.
+- Limitation à **30 scans par minute**.
+- Tableau de bord organisateur avec statistiques en temps réel et export CSV des participants.
+
+## Stack technique
+
+| Couche | Technologies |
+| --- | --- |
+| Frontend | Next.js 14+, React, TypeScript |
+| Backend | Node.js, NestJS 11, TypeScript |
+| Base de données | PostgreSQL 17 (Supabase ou Docker en local) |
+| ORM | TypeORM 0.3 |
+| Authentification | JWT, Passport.js, bcrypt |
+| Validation | `class-validator`, Joi |
+| Documentation API | Swagger |
+| Conteneurisation | Docker, Docker Compose |
+| CI/CD | GitHub Actions |
+| Hébergement envisagé | Vercel (frontend), Render (backend), Supabase (base de données) |
+
+## Architecture du projet
+
+```text
+EventHub/
+├── api/                          # Backend NestJS
 │   ├── src/
-│   │   ├── auth/               # Module authentification
-│   │   │   ├── dto/            # RegisterDto, LoginDto
-│   │   │   ├── guards/         # JwtAuthGuard, LocalAuthGuard, JwtRefreshGuard
-│   │   │   ├── strategies/     # local, jwt, jwt-refresh
+│   │   ├── auth/                 # Authentification et stratégies Passport
+│   │   │   ├── dto/
+│   │   │   ├── guards/
+│   │   │   ├── strategies/
 │   │   │   ├── auth.controller.ts
 │   │   │   ├── auth.service.ts
 │   │   │   └── auth.module.ts
-│   │   ├── users/
-│   │   │   ├── entities/       # User, Role
+│   │   ├── users/                # Utilisateurs et rôles
+│   │   │   ├── entities/
 │   │   │   ├── users.service.ts
 │   │   │   └── users.module.ts
-│   │   ├── events/
-│   │   │   └── entities/       # Event, TicketCategory
-│   │   ├── orders/
-│   │   │   └── entities/       # Order, Ticket
-│   │   ├── payments/
-│   │   │   └── entities/       # Payment
+│   │   ├── events/               # Événements et catégories de billets
+│   │   │   └── entities/
+│   │   ├── orders/               # Commandes et billets
+│   │   │   └── entities/
+│   │   ├── payments/             # Paiements
+│   │   │   └── entities/
 │   │   ├── database/
-│   │   │   └── seeds/          # Seeders roles et utilisateurs
+│   │   │   └── seeds/             # Initialisation des rôles et comptes
 │   │   └── app.module.ts
-│   ├── test/
+│   ├── test/                     # Tests
 │   ├── .env.example
 │   └── package.json
-├── web/                        # Frontend Next.js
+├── web/                          # Frontend Next.js
 ├── docs/
-│   └── conception/             # Diagrammes UML (draw.io)
-├── docker-compose.yml          # PostgreSQL local
+│   ├── conception/               # Diagrammes UML (draw.io)
+│   └── SUPABASE_DEPLOYMENT.md    # Guide de déploiement
+├── docker-compose.yml            # PostgreSQL local
 └── .github/
-    └── workflows/              # CI/CD
+    └── workflows/
+        └── ci.yml                # Pipeline CI/CD
 ```
 
----
+## Modèle de données
 
-## Modele de donnees
+| Entité | Description |
+| --- | --- |
+| `User` | Utilisateur et rôle (`ADMIN`, `ORGANIZER`, `STAFF`, `USER`) |
+| `Role` | Rôle et droits associés |
+| `Event` | Événement, catégorie, dates, capacité et lieu |
+| `TicketCategory` | Catégorie de billet (VIP, Standard, etc.) |
+| `Order` | Réservation / commande d'un utilisateur |
+| `Ticket` | Billet individuel et QR code signé |
+| `Payment` | Transaction de paiement |
+| `EventStaff` | Affectation du personnel à un événement |
+| `QRScanLog` | Traçabilité et audit des validations de billets |
 
-### Entites
+### Relations principales
 
-| Entite           | Description                                            |
-|------------------|--------------------------------------------------------|
-| `User`           | Utilisateur avec role (ADMIN, ORGANIZER, STAFF, USER)  |
-| `Role`           | Role systeme                                           |
-| `Event`          | Evenement avec categorie, dates, capacite, lieu        |
-| `TicketCategory` | Categories de billets par evenement (VIP, standard...) |
-| `Order`          | Commande d'un utilisateur                              |
-| `Ticket`         | Billet individuel avec QR code signe                   |
-| `Payment`        | Transaction de paiement                                |
-| `EventStaff`     | Assignation de staff par evenement                     |
-| `QRScanLog`      | Journal d'audit de tous les scans                      |
+- `User` **N:1** `Role`
+- `User` **1:N** `Order`
+- `User` (organisateur) **1:N** `Event`
+- `Event` **1:N** `TicketCategory`
+- `Order` **N:1** `User` et **N:1** `Event`
+- `Order` **1:N** `Ticket`
+- `Order` **1:1** `Payment`
 
-### Relations cles
-- `User` N:1 `Role`
-- `User` 1:N `Order`
-- `User` (organizer) 1:N `Event`
-- `Event` 1:N `TicketCategory`
-- `Order` N:1 `User`, N:1 `Event`
-- `Order` 1:N `Ticket`
-- `Order` 1:1 `Payment`
+Les diagrammes de conception UML sont disponibles dans [`docs/conception/`](docs/conception/).
 
----
+## Installation locale
 
-## Configuration et Installation
+### Prérequis
 
-### Prerequis
-- Node.js 18+
-- Docker + Docker Compose (optionnel, pour PostgreSQL local)
-- Git
+- **Node.js 18+**
+- **Git**
+- **Docker** et **Docker Compose** (facultatifs si vous utilisez une base PostgreSQL distante)
 
-### 1. Cloner et configurer
+### 1. Cloner le dépôt
 
 ```bash
-git clone https://github.com/Keltoummalouki/Morocco360.git
-cd Morocco360
+git clone https://github.com/Keltoummalouki/EventHub.git
+cd EventHub
 ```
 
-### 2. Demarrer la base de donnees
+### 2. Préparer la base de données
 
-Pour utiliser Supabase et deployer gratuitement, suivre
-**[le guide de deploiement Supabase](docs/SUPABASE_DEPLOYMENT.md)**.
-
-Pour le developpement PostgreSQL local :
+Pour utiliser PostgreSQL en local via Docker :
 
 ```bash
 cp api/.env.example api/.env
@@ -163,9 +188,10 @@ docker compose up -d
 docker compose ps
 ```
 
-Variables a renseigner dans `api/.env` :
+Renseigner les variables dans `api/.env` :
 
-```env
+```dotenv
+# Configuration PostgreSQL locale d'origine
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=morocco360_user
@@ -174,53 +200,69 @@ DB_NAME=morocco360
 
 NODE_ENV=development
 
+# À remplacer par des secrets forts et différents
 JWT_ACCESS_SECRET=change_this_to_a_long_random_secret
 JWT_REFRESH_SECRET=change_this_to_another_long_random_secret
 JWT_ACCESS_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
 ```
 
-### 3. Installer et lancer le backend
+> **Important :** `DB_USER`, `DB_PASS` et `DB_NAME` conservent ici leurs valeurs historiques. Renommer le dépôt en EventHub ne modifie pas automatiquement les utilisateurs et les bases PostgreSQL définis dans `docker-compose.yml`. Ne les changez que si la configuration Docker, les données et les variables d'environnement sont migrées ensemble.
+
+### 3. Démarrer le backend
 
 ```bash
 cd api
 npm install
 npm run start:dev
-# Serveur disponible sur http://localhost:4001
 ```
 
-### 4. Seeder la base de donnees
+API locale : **http://localhost:4001**
+
+### 4. Initialiser les rôles et les utilisateurs de développement
+
+Depuis le répertoire `api/` :
 
 ```bash
-cd api
 npm run seed
 ```
 
-Comptes crees par le seeder :
+Comptes de démonstration décrits dans la configuration initiale :
 
-| Email                   | Mot de passe  | Role      |
-|-------------------------|---------------|-----------|
-| admin@morocco360.ma     | Admin1234     | ADMIN     |
-| organizer@morocco360.ma | Organizer1234 | ORGANIZER |
-| user@morocco360.ma      | User1234      | USER      |
+| E-mail | Mot de passe de démonstration | Rôle |
+| --- | --- | --- |
+| `admin@morocco360.ma` | `Admin1234` | `ADMIN` |
+| `organizer@morocco360.ma` | `Organizer1234` | `ORGANIZER` |
+| `user@morocco360.ma` | `User1234` | `USER` |
 
----
+> **Sécurité :** ces comptes et mots de passe sont uniquement destinés au développement local. Ne les exposez jamais dans un environnement de production. Leurs adresses conservent également le nom historique jusqu'à la mise à jour des scripts de seed.
 
-## API REST - Authentification
+### 5. Démarrer le frontend
 
-### Endpoints
+Dans un **second terminal**, depuis la racine du projet :
 
-| Methode | Route               | Description           | Auth             |
-|---------|---------------------|-----------------------|------------------|
-| POST    | `/auth/register`    | Inscription           | Public           |
-| POST    | `/auth/login`       | Connexion             | Public           |
-| POST    | `/auth/logout`      | Deconnexion           | Bearer (access)  |
-| POST    | `/auth/refresh`     | Renouveler les tokens | Bearer (refresh) |
+```bash
+cd web
+npm install
+npm run dev
+```
+
+L'URL exacte du frontend dépend de la configuration de `web/`.
+
+## API REST — authentification
+
+| Méthode | Route | Description | Authentification |
+| --- | --- | --- | --- |
+| `POST` | `/auth/register` | Créer un compte | Publique |
+| `POST` | `/auth/login` | Se connecter | Publique |
+| `POST` | `/auth/logout` | Se déconnecter | Bearer (access token) |
+| `POST` | `/auth/refresh` | Renouveler les tokens | Bearer (refresh token) |
 
 ### Inscription
 
+**Requête — `POST /auth/register`**
+
 ```json
-POST /auth/register
 {
   "username": "johndoe",
   "email": "john@example.com",
@@ -230,109 +272,138 @@ POST /auth/register
 }
 ```
 
-Reponse 201 :
+**Exemple de réponse — `201 Created`**
 
 ```json
 {
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "accessToken": "<jwt-access-token>",
+  "refreshToken": "<jwt-refresh-token>"
 }
 ```
 
-Regles de validation du mot de passe :
-- 8 a 100 caracteres
-- Au moins une majuscule
-- Au moins une minuscule
-- Au moins un chiffre
+**Règles de validation des mots de passe :**
+
+- Entre 8 et 100 caractères.
+- Au moins une majuscule.
+- Au moins une minuscule.
+- Au moins un chiffre.
 
 ### Connexion
 
+**Requête — `POST /auth/login`**
+
 ```json
-POST /auth/login
 {
   "email": "john@example.com",
   "password": "Password1"
 }
 ```
 
----
+## Sécurité
 
-## Securite
+La sécurité fait partie des objectifs fondamentaux de l'architecture EventHub :
 
-- **JWT** : access token 15 min + refresh token 7 jours avec rotation
-- **Refresh token** : seul le hash bcrypt est stocke en base (jamais le token brut)
-- **Rotation** : chaque `/auth/refresh` invalide l'ancien refresh token et en cree un nouveau
-- **Rate limiting** : 5 req/min sur `/auth/register`, 10 req/min sur `/auth/login`
-- **Validation** : whitelist stricte sur tous les DTOs (class-validator)
-- **Hachage passwords** : bcrypt cost factor 12
-- **Variables sensibles** : uniquement en variables d'environnement (jamais en Git)
-
----
+- **JWT à durée limitée :** access token de 15 minutes et refresh token de 7 jours.
+- **Rotation des refresh tokens :** chaque renouvellement invalide l'ancien refresh token et génère un nouveau token.
+- **Stockage des refresh tokens :** conservation exclusive d'un hash bcrypt, jamais du token brut.
+- **Mots de passe :** hachage bcrypt avec un cost factor de 12.
+- **Rate limiting :** 5 requêtes/minute pour `/auth/register`, 10 pour `/auth/login`, 30 scans/minute.
+- **Validation des données :** validation stricte des DTO avec `class-validator` et propriétés non autorisées filtrées.
+- **Autorisations :** contrôle d'accès selon les rôles et les affectations aux événements.
+- **Billets :** QR codes signés avec HMAC-SHA256 et protection contre le double scan grâce au verrouillage pessimiste.
+- **Traçabilité :** journal d'audit des scans.
+- **Configuration :** secrets stockés dans les variables d'environnement, jamais dans Git.
 
 ## Tests
 
-```bash
-cd api
-npm run test        # Tests unitaires
-npm run test:cov    # Tests avec couverture
-npm run test:e2e    # Tests E2E
-```
+Depuis `api/` :
 
----
+```bash
+npm run test       # Tests unitaires
+npm run test:cov   # Tests avec couverture
+npm run test:e2e   # Tests end-to-end
+```
 
 ## CI/CD
 
-GitHub Actions execute automatiquement :
-1. Linting ESLint
-2. Build TypeScript
-3. Tests unitaires
-4. Tests E2E (avec service PostgreSQL)
+Le pipeline **GitHub Actions** est défini dans [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
 
-Fichier de configuration : `.github/workflows/ci.yml`
+Il effectue automatiquement :
 
----
+1. L'analyse du code avec **ESLint**.
+2. La compilation / vérification du build TypeScript.
+3. Les **tests unitaires**.
+4. Les **tests E2E**, avec un service PostgreSQL.
+
+## Déploiement
+
+Une architecture d'hébergement envisagée pour EventHub :
+
+| Service | Plateforme |
+| --- | --- |
+| Frontend Next.js | Vercel |
+| API NestJS | Render |
+| Base PostgreSQL | Supabase |
+
+Consultez le [guide de déploiement Supabase](docs/SUPABASE_DEPLOYMENT.md) pour les étapes de configuration et de mise en ligne.
+
+## Historique des versions
+
+### `v0.3.0` — Mars 2026
+
+**Système de contrôle d'accès et scanning QR**
+
+- QR codes signés avec HMAC-SHA256.
+- Prévention du double scan via verrouillage pessimiste.
+- Nouveau rôle `STAFF` pour les agents de contrôle.
+- Affectation du personnel par événement (`EventStaff`).
+- Journal d'audit des scans (`QRScanLog`).
+- Interface de scanning optimisée pour mobile.
+- Dashboard organisateur avec statistiques en temps réel.
+- Export CSV des participants.
+- Rate limiting à 30 scans/minute.
+- Health checks pour l'orchestration.
+- Documentation Swagger de l'API.
+- Validation de la configuration au démarrage avec Joi.
+- Filtres d'exception TypeORM personnalisés.
+
+### `v0.2.0` — Mars 2026
+
+**Authentification et sécurisation de l'API**
+
+- Authentification JWT (access et refresh tokens avec rotation).
+- Stratégies Passport : `local`, `jwt`, `jwt-refresh`.
+- Rate limiting sur les routes d'authentification.
+- Seeders pour les rôles et utilisateurs.
+- Validation globale des DTOs.
+
+### `v0.1.0` — Février 2026
+
+**Fondations du projet**
+
+- Monorepo `api/` et `web/`.
+- Configuration NestJS, TypeORM et PostgreSQL avec Docker.
+- Modélisation initiale de 7 entités : `User`, `Role`, `Event`, `TicketCategory`, `Order`, `Ticket`, `Payment`.
+- Pipeline CI/CD GitHub Actions.
 
 ## Contribution
 
-1. Fork le repo
-2. Creer une branche (`git checkout -b feature/ma-feature`)
-3. Commiter avec des messages clairs
-4. Ouvrir une Pull Request vers `main`
+Les contributions et propositions d'amélioration sont les bienvenues :
+
+1. Forker le dépôt.
+2. Créer une branche dédiée : `git checkout -b feature/ma-fonctionnalite`.
+3. Développer et tester les modifications.
+4. Commiter avec un message clair.
+5. Ouvrir une Pull Request vers `main`.
+
+## Notes sur le changement de nom
+
+Le projet s'appelle désormais **EventHub** (anciennement **Morocco360**).
+
+- Le **nom public**, le **titre de la documentation**, l'**URL GitHub** et les commandes de clonage utilisent désormais `EventHub`.
+- Les **identifiants internes historiques** (base PostgreSQL, utilisateur Docker, comptes créés par les seeders) restent inchangés dans les exemples ci-dessus pour correspondre à la configuration décrite initialement.
+- Une migration de ces identifiants ne doit être effectuée qu'après vérification des fichiers de configuration et des données existantes.
 
 ---
 
-## Changelog
-
-### v0.3.0 (Mars 2026)
-- **Systeme de scanning QR complet**
-  - QR codes signes avec HMAC-SHA256 (prevention de la contrefacon)
-  - Verrouillage pessimiste (prevention des doubles scans)
-  - Role STAFF ajoute pour le personnel de scanning
-  - Assignation de staff par evenement (EventStaff)
-  - Journal d'audit complet (QRScanLog)
-  - Interface scanner mobile optimisee
-  - Dashboard organizer avec stats en temps reel
-  - Export CSV des participants
-  - Rate limiting (30 scans/minute)
-  - Health checks pour orchestration
-  - Documentation Swagger complete
-  - Validation de configuration au demarrage (Joi)
-  - Filtres d'exception TypeORM personnalises
-
-### v0.2.0 (Mars 2026)
-- Authentification JWT (access token + refresh token avec rotation)
-- Strategies Passport : local, jwt, jwt-refresh
-- Rate limiting sur les routes d'auth
-- Seeders pour les roles et utilisateurs
-- Validation globale des DTOs
-
-### v0.1.0 (Fevrier 2026)
-- Mise en place du monorepo (api/ + web/)
-- Configuration NestJS + TypeORM + PostgreSQL via Docker
-- Modelisation BDD : 7 entites (User, Role, Event, TicketCategory, Order, Ticket, Payment)
-- Pipeline CI/CD GitHub Actions
-
----
-
-**Status** : Active Development
-**Derniere mise a jour** : April 2026
+**EventHub** — Découvrez les événements du Maroc, réservez vos billets et vivez chaque expérience.
